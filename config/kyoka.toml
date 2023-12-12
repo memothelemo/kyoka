@@ -1,5 +1,0 @@
-[bot]
-token = "Hello"
-
-[bot.proxy]
-url = "discord.com"
