@@ -1,2 +1,10 @@
-/target
+# Build/environment artifacts
+/target/
+.DS_Store
+
+# Lock files
+.$*.bkp
+
+# Environment and secret files
 .env
+/config/kyoka.toml

@@ -2,7 +2,7 @@ use error_stack::{Result, ResultExt};
 use std::time::Instant;
 use tracing_subscriber::{filter::Targets, prelude::*, Layer, Registry};
 
-use crate::{Config, SetupError, State};
+use crate::{util, Config, SetupError, State};
 
 pub fn init_logging(cfg: &Config) -> Result<(), SetupError> {
     let log_description =
@@ -16,13 +16,29 @@ pub fn init_logging(cfg: &Config) -> Result<(), SetupError> {
 
     let format_layer = tracing_subscriber::fmt::layer()
         .pretty()
-        .with_ansi(cfg.log().color_enabled())
-        .with_filter(cfg.log().level())
-        .with_filter(targets.clone());
+        .with_ansi(cfg.log().color_enabled());
 
-    let subscriber = Registry::default().with(format_layer);
-    tracing::subscriber::set_global_default(subscriber)
-        .change_context(SetupError)?;
+    // Docker already logged timestamp for every line of stdout
+    //
+    // tracing-subscriber's Format config layer has very explicit types
+    if util::is_running_in_docker() {
+        let format_layer = format_layer
+            .without_time()
+            .with_filter(cfg.log().level())
+            .with_filter(targets.clone());
+
+        let subscriber = Registry::default().with(format_layer);
+        tracing::subscriber::set_global_default(subscriber)
+            .change_context(SetupError)?;
+    } else {
+        let format_layer = format_layer
+            .with_filter(cfg.log().level())
+            .with_filter(targets.clone());
+
+        let subscriber = Registry::default().with(format_layer);
+        tracing::subscriber::set_global_default(subscriber)
+            .change_context(SetupError)?;
+    }
 
     Ok(())
 }
