@@ -14,9 +14,8 @@ pub fn init_logging(cfg: &Config) -> Result<(), SetupError> {
         .parse::<Targets>()
         .change_context(SetupError)?;
 
-    let format_layer = tracing_subscriber::fmt::layer()
-        .pretty()
-        .with_ansi(cfg.log().color_enabled());
+    let format_layer =
+        tracing_subscriber::fmt::layer().with_ansi(cfg.log().color_enabled());
 
     // Docker already logged timestamp for every line of stdout
     //
