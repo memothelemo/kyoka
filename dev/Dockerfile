@@ -23,7 +23,6 @@ RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/re
         echo "Please specify whether RUST_BUILD_MODE is in `debug` or `release`"; \
         exit 1;\
     fi; \
-    cargo build; \
     mkdir -p dist; \
     mv target/${RUST_BUILD_MODE}/setup dist/; \
     mv target/${RUST_BUILD_MODE}/shard dist/;
