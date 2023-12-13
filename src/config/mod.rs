@@ -204,6 +204,7 @@ pub struct ConfigLoadError;
 
 const DEFAULT_NAME: &str = "kyoka.toml";
 const FILE_ENV: &str = "KYOKA_CONFIG";
+const ALT_FILE_PATH: &str = "config/kyoka.toml";
 
 impl Config {
     pub fn from_file(path: &Path) -> Result<Self, ConfigLoadError> {
@@ -264,6 +265,17 @@ impl Config {
 
         if let Some(file) = file_env {
             return Ok(Some(file));
+        }
+
+        // Fail safeover in case if it is running under Docker
+        // container. This is just to deal with the limitations
+        // of binding a host path as a volume for a Docker container.
+        if crate::util::is_running_in_docker()
+            && std::fs::metadata(ALT_FILE_PATH)
+                .map(|meta| meta.is_file())
+                .unwrap_or_default()
+        {
+            return Ok(Some(ALT_FILE_PATH.into()));
         }
 
         let cwd = std::env::current_dir()?.into_boxed_path();

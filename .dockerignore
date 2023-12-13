@@ -1,6 +1,19 @@
 # Build artifacts
 /target
+.DS_Store
 
-# Configuration (IDE and shard)
-config
+# IDE Configuration
 .vscode
+.idea
+
+# Docker itself
+.dockerignore
+Dockerfile
+
+# Git files
+.git
+.gitignore
+
+# Secret files
+/config
+.env
