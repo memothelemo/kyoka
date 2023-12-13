@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.6
 ARG RUST_VERSION=1.74.0
 ARG USER=kyoka
+ARG RUST_BUILD_MODE=debug
 
 FROM rust:${RUST_VERSION} AS compile
 
@@ -10,14 +11,22 @@ COPY . .
 # Required dependencies for compilation
 RUN apt update && apt install -y libopus-dev
 
-# Debug build or release
+# Download dependencies and debug build
 RUN --mount=type=cache,target=/usr/local/cargo/registry set -ex; cargo fetch
 
 RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/registry set -ex; \
-    cargo build --release; \
+    if [ "${RUST_BUILD_MODE}" = "debug" ]; then \
+        cargo build; \
+    elif [ "${RUST_BUILD_MODE}" = "release" ]; then \
+        cargo build --release; \
+    else \
+        echo "Please specify whether RUST_BUILD_MODE is in `debug` or `release`"; \
+        exit 1;\
+    fi; \
+    cargo build; \
     mkdir -p dist; \
-    mv target/release/setup dist/; \
-    mv target/release/shard dist/;
+    mv target/${RUST_BUILD_MODE}/setup dist/; \
+    mv target/${RUST_BUILD_MODE}/shard dist/;
 
 ###############################################################
 FROM debian:bookworm-slim AS runner
