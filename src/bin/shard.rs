@@ -15,6 +15,7 @@ use twilight_model::{
         application_command::CommandData, Interaction, InteractionData,
     },
     http::interaction::{InteractionResponse, InteractionResponseType},
+    id::marker::UserMarker,
 };
 use twilight_util::builder::InteractionResponseDataBuilder;
 
@@ -118,6 +119,8 @@ async fn gateway_runner(
                         continue;
                     },
                 };
+                state.songbird().process(&event).await;
+
                 let state = state.clone();
                 tracker.spawn(async move {
                     if let Err(error) = process_event(state, event).await {
@@ -180,6 +183,17 @@ async fn main() -> Result<(), SetupError> {
         state.config().bot().token().to_string(),
         Intents::GUILDS | Intents::GUILD_MESSAGES,
     );
+
+    let shard_map = songbird::shards::TwilightMap::new({
+        let mut map = std::collections::HashMap::new();
+        map.insert(ShardId::ONE.number(), shard.sender());
+        map
+    });
+    let songbird = songbird::Songbird::twilight(
+        shard_map.into(),
+        state.application().id.cast::<UserMarker>(),
+    );
+    state.init_songbird(songbird);
 
     let cancel_token = CancellationToken::new();
     let handle = tokio::spawn(gateway_runner(

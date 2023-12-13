@@ -1,6 +1,10 @@
 use error_stack::{FutureExt, Result};
 use futures::future::TryFutureExt;
-use std::{fmt::Debug, future::IntoFuture, sync::Arc};
+use once_cell::sync::OnceCell;
+use songbird::Songbird;
+use std::fmt::Debug;
+use std::future::IntoFuture;
+use std::sync::Arc;
 use thiserror::Error;
 use twilight_http::client::InteractionClient;
 use twilight_http::Client as Http;
@@ -16,6 +20,7 @@ pub struct State {
     application: Application,
     config: Arc<Config>,
     http: Arc<Http>,
+    songbird: OnceCell<Arc<Songbird>>,
 }
 
 #[derive(Debug, Error)]
@@ -40,7 +45,12 @@ impl State {
             .and_then(|v| v.model().change_context(StateError))
             .await?;
 
-        Ok(Self { application, config: Arc::new(cfg), http })
+        Ok(Self {
+            application,
+            config: Arc::new(cfg),
+            http,
+            songbird: OnceCell::new(),
+        })
     }
 
     /// Shows the application id of a bot
@@ -63,6 +73,30 @@ impl State {
     #[must_use]
     pub fn http(&self) -> &Http {
         &self.http
+    }
+
+    /// Initializes songbird client.
+    ///
+    /// Due to the current code structure of Kyoka, it is
+    /// not possible to initialize [`Songbird`] from the
+    /// [`State`] because [`songbird`] requires a currently
+    /// running shard while Kyoka allows to hold [`State`]
+    /// regardless it has a shard running.
+    ///
+    /// ## Panics
+    /// It will panic if songbird object is already initialized
+    pub fn init_songbird(&self, songbird: Songbird) {
+        self.songbird
+            .set(Arc::new(songbird))
+            .expect("songbird object is already initialized")
+    }
+
+    /// Gets the [`Songbird`] object.
+    ///
+    /// ## Panics
+    /// It will panic if songbird object is not initialized
+    pub fn songbird(&self) -> &Songbird {
+        self.songbird.get().expect("Songbird is not initialized")
     }
 }
 

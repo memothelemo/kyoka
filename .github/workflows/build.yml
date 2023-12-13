@@ -13,6 +13,9 @@ jobs:
         with:
           submodules: true
 
+      - name: Install required libraries
+        run: apt update && apt install -y libopus-dev
+
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:

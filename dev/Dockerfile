@@ -7,6 +7,9 @@ FROM rust:${RUST_VERSION} AS compile
 WORKDIR /usr/build/kyoka
 COPY . .
 
+# Required dependencies for compilation
+RUN apt update && apt install -y libopus-dev
+
 # Debug build or release
 RUN --mount=type=cache,target=/usr/local/cargo/registry set -ex; cargo fetch
 
@@ -19,7 +22,11 @@ RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/re
 ###############################################################
 FROM debian:bookworm-slim AS runner
 
-RUN apt update && apt install -y ca-certificates
+# songbird relies on `ytdl` binary anyway
+RUN apt update && apt install -y ca-certificates youtube-dl
+
+# Testing dependencies
+RUN set -ex; yt-dlp --help
 
 # Setup unprivileged user
 RUN adduser \
