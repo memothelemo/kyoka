@@ -48,6 +48,7 @@ async fn process_event(
     state: State,
     event: Event,
 ) -> Result<(), ProcessEventFailed> {
+    println!("{:?}", &event);
     match event {
         Event::Ready(info) => {
             tracing::info!(
@@ -181,7 +182,7 @@ async fn main() -> Result<(), SetupError> {
     let shard = Shard::new(
         ShardId::ONE,
         state.config().bot().token().to_string(),
-        Intents::GUILDS | Intents::GUILD_MESSAGES,
+        Intents::GUILDS | Intents::GUILD_MESSAGES | Intents::GUILD_VOICE_STATES,
     );
 
     let shard_map = songbird::shards::TwilightMap::new({

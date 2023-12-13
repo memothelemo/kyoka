@@ -1,5 +1,3 @@
-use error_stack::ResultExt;
-
 use super::prelude::*;
 
 #[derive(Debug, CommandModel, CreateCommand)]

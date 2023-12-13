@@ -1,3 +1,4 @@
+mod join;
 mod ping;
 pub use ping::Ping;
 
@@ -30,7 +31,7 @@ mod prelude {
     pub use crate::State;
 
     pub use async_trait::async_trait;
-    pub use error_stack::Result;
+    pub use error_stack::{Result, ResultExt};
     pub use twilight_interactions::command::{CommandModel, CreateCommand};
     pub use twilight_model::{
         application::interaction::Interaction, http::interaction::*,
