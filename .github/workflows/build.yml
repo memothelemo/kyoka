@@ -5,8 +5,8 @@ on:
     branches: [master]
 
 jobs:
-  build:
-    name: Build from source
+  source:
+    name: Source
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -28,10 +28,10 @@ jobs:
         with:
           command: build
 
-  build-dev-image:
-    name: Build and publish Docker dev image
+  docker-image:
+    name: Docker dev image
     runs-on: ubuntu-latest
-    needs: build
+    needs: source
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
