@@ -18,11 +18,11 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry set -ex; cargo fetch
 ARG RUST_BUILD_MODE
 
 RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/registry set -ex; \
-    if [ '${RUST_BUILD_MODE}' = 'debug' ]; then \
+    if [ "${RUST_BUILD_MODE}" == "debug" ]; then \
         cargo build; \
         mv target/debug/setup dist/; \
         mv target/debug/shard dist/; \
-    elif [ '${RUST_BUILD_MODE}' = 'release' ]; then \
+    elif [ "${RUST_BUILD_MODE}" == "release" ]; then \
         cargo build --release; \
         mkdir -p dist; \
         mv target/release/setup dist/; \
