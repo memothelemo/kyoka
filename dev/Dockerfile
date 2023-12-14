@@ -14,8 +14,10 @@ RUN apt update && apt install -y libopus-dev
 # Download dependencies and debug build
 RUN --mount=type=cache,target=/usr/local/cargo/registry set -ex; cargo fetch
 
+# Odd fix: https://benkyriakou.com/posts/docker-args-empty
+ARG RUST_BUILD_MODE
+
 RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/registry set -ex; \
-    echo ${RUST_BUILD_MODE}; \
     if [ '${RUST_BUILD_MODE}' = 'debug' ]; then \
         cargo build; \
         mv target/debug/setup dist/; \
@@ -39,20 +41,23 @@ RUN apt update && apt install -y ca-certificates youtube-dl
 # Testing dependencies
 RUN set -ex; yt-dlp --help
 
+# Odd fix: https://benkyriakou.com/posts/docker-args-empty
+ARG USER
+
 # Setup unprivileged user
 RUN adduser \
     --disabled-password \
     --home "/dev/null" \
     --no-create-home \
     --gecos "" \
-    worker
+    ${USER}
 
 WORKDIR /app
 
 COPY --chmod=0755 --from=compile /usr/build/kyoka/dist/* ./
 COPY --chmod=0755 --from=compile /usr/build/kyoka/dev/entrypoint.sh ./
 
-USER worker
+USER ${USER}
 
 LABEL org.opencontainers.image.authors="memothelemo"
 LABEL org.opencontainers.image.source="https://github.com/memothelemo/kyoka"
