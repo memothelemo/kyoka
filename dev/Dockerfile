@@ -15,12 +15,12 @@ RUN apt update && apt install -y libopus-dev
 RUN --mount=type=cache,target=/usr/local/cargo/registry set -ex; cargo fetch
 
 RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/registry set -ex; \
-    if [ "${RUST_BUILD_MODE}" = "debug" ]; then \
+    if [ '${RUST_BUILD_MODE}' = 'debug' ]; then \
         cargo build; \
-    elif [ "${RUST_BUILD_MODE}" = "release" ]; then \
+    elif [ '${RUST_BUILD_MODE}' = 'release' ]; then \
         cargo build --release; \
     else \
-        echo "Please specify whether RUST_BUILD_MODE is in `debug` or `release`"; \
+        echo 'Please specify whether RUST_BUILD_MODE is in `debug` or `release`'; \
         exit 1;\
     fi; \
     mkdir -p dist; \
