@@ -1,12 +1,8 @@
 use super::prelude::*;
 
-#[derive(Debug, CommandModel, CreateCommand)]
-#[command(name = "ping", desc = "Responds back with pong")]
-pub struct Ping;
-
 #[async_trait]
-impl Runner for Ping {
-    #[tracing::instrument(skip(interaction))]
+impl Runner for cmd::Ping {
+    #[tracing::instrument]
     async fn run(
         &self,
         state: &State,

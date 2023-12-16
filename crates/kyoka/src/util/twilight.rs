@@ -3,9 +3,9 @@
 #[macro_export]
 macro_rules! perform_request {
     ($expr:expr, $($ctx:tt)*) => {{
-        use error_stack::FutureExt;
-        use futures::TryFutureExt;
-        use std::future::IntoFuture;
+        use ::error_stack::FutureExt;
+        use ::futures::TryFutureExt;
+        use ::std::future::IntoFuture;
 
         ($expr)
             .into_future()

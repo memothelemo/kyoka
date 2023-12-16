@@ -1,8 +1,14 @@
 use error_stack::{Result, ResultExt};
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
+use thiserror::Error;
 use tracing_subscriber::{filter::Targets, prelude::*, Layer, Registry};
+use twilight_http::client::InteractionClient;
 
-use crate::{util, Config, SetupError, State};
+use crate::{config::Config, util};
+
+#[derive(Debug, Error)]
+#[error("Failed to setup Kyoka")]
+pub struct SetupError;
 
 pub fn init_logging(cfg: &Config) -> Result<(), SetupError> {
     let log_description =
@@ -22,6 +28,7 @@ pub fn init_logging(cfg: &Config) -> Result<(), SetupError> {
     // tracing-subscriber's Format config layer has very explicit types
     if util::is_running_in_docker() {
         let format_layer = format_layer
+            .pretty()
             .without_time()
             .with_filter(cfg.log().level())
             .with_filter(targets.clone());
@@ -31,6 +38,7 @@ pub fn init_logging(cfg: &Config) -> Result<(), SetupError> {
             .change_context(SetupError)?;
     } else {
         let format_layer = format_layer
+            .pretty()
             .with_filter(cfg.log().level())
             .with_filter(targets.clone());
 
@@ -42,8 +50,21 @@ pub fn init_logging(cfg: &Config) -> Result<(), SetupError> {
     Ok(())
 }
 
-#[tracing::instrument]
-pub async fn cmd(state: &State) -> Result<(), SetupError> {
+pub fn make_http_client(cfg: &Config) -> Arc<twilight_http::Client> {
+    let mut http =
+        twilight_http::Client::builder().token(cfg.bot().token().to_string());
+
+    if let Some(proxy) = cfg.bot().proxy() {
+        http = http.proxy(proxy.url().to_string(), proxy.use_http());
+    }
+
+    Arc::new(http.build())
+}
+
+#[tracing::instrument(skip(interaction_client))]
+pub async fn load_commands(
+    interaction_client: InteractionClient<'_>,
+) -> Result<(), SetupError> {
     use crate::{cmd, perform_request};
     use twilight_interactions::command::CreateCommand;
 
@@ -51,7 +72,7 @@ pub async fn cmd(state: &State) -> Result<(), SetupError> {
 
     let now = Instant::now();
     perform_request!(
-        state.interaction().set_global_commands(required_cmds),
+        interaction_client.set_global_commands(required_cmds),
         SetupError
     )
     .await?;

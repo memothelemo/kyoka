@@ -1,10 +1,16 @@
 use error_stack::{Result, ResultExt};
-use kyoka::{Config, SetupError, State};
+use kyoka::config::Config;
+use kyoka::perform_request;
+use kyoka::setup::SetupError;
 use yansi::Paint;
 
 async fn setup(cfg: Config) -> Result<(), SetupError> {
-    let state = State::new(cfg).await.change_context(SetupError)?;
-    kyoka::setup::cmd(&state).await?;
+    let http = kyoka::setup::make_http_client(&cfg);
+    let app_info =
+        perform_request!(http.current_user_application(), SetupError).await?;
+
+    let interaction = http.interaction(app_info.id);
+    kyoka::setup::load_commands(interaction).await?;
 
     Ok(())
 }
@@ -16,7 +22,7 @@ fn main() -> Result<(), SetupError> {
     kyoka::setup::init_logging(&cfg)?;
 
     println!(
-        "🔨 {} ({}) {}",
+        "🔨 {} v{} {}",
         "Setting up Kyoka".bold(),
         VERSION.bold(),
         "bot environment".bold(),
@@ -26,7 +32,7 @@ fn main() -> Result<(), SetupError> {
     println!("> config: {:?}", cfg.dim().bold());
     println!();
 
-    let rt = tokio::runtime::Builder::new_multi_thread()
+    let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("failed to init tokio runtime");

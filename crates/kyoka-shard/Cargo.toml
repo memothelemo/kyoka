@@ -1,0 +1,26 @@
+[package]
+name = "kyoka-shard"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+error-stack.workspace = true
+futures.workspace = true
+kyoka.workspace = true
+songbird.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+twilight-http.workspace = true
+twilight-gateway.workspace = true
+twilight-interactions.workspace = true
+twilight-model.workspace = true
+twilight-util.workspace = true
+
+actix-web = "4.4.0"
+actix-web-prom = "0.7.0"
