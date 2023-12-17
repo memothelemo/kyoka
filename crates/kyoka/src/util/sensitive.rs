@@ -137,18 +137,6 @@ impl<'a> From<&'a Sensitive<String>> for Cow<'a, str> {
     }
 }
 
-impl validator::HasLength for Sensitive<String> {
-    fn length(&self) -> usize {
-        self.0.len()
-    }
-}
-
-impl<'a> validator::HasLength for &'a Sensitive<String> {
-    fn length(&self) -> usize {
-        self.0.len()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::Sensitive;
@@ -182,13 +170,5 @@ mod tests {
         let value = Sensitive::new("hello");
         assert_eq!(value.to_string(), "<redacted>");
         assert_eq!(format!("{value:?}"), "<redacted>");
-    }
-
-    #[test]
-    fn test_validator_impl() {
-        use validator::HasLength;
-
-        let testing = Sensitive::new("Hello".to_string());
-        assert_eq!(testing.length(), 5);
     }
 }

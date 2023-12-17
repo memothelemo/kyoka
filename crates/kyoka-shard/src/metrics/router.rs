@@ -1,8 +1,7 @@
-use actix_web::{
-    web::{self, ServiceConfig},
-    HttpResponse,
-};
+use actix_web::web::{self, ServiceConfig};
+use actix_web::HttpResponse;
 
+#[tracing::instrument]
 pub async fn health() -> HttpResponse {
     HttpResponse::Ok().body("I'm healthy and alive!")
 }
