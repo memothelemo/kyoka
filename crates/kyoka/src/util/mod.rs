@@ -7,16 +7,60 @@ pub use sensitive::*;
 
 use error_stack::{Result, ResultExt};
 use std::path::Path;
+use std::time::Instant;
 use thiserror::Error;
 use tracing_subscriber::filter::Targets;
 use tracing_subscriber::{prelude::*, Layer, Registry};
+use twilight_http::client::InteractionClient;
+
+use crate::config;
+
+#[derive(Debug, Error)]
+#[error("Failed to setup commands")]
+pub struct SetupCommandsError;
 
 #[derive(Debug, Error)]
 #[error("Failed to initialize logging")]
 pub struct InitLoggingError;
 
+pub fn make_http_client(cfg: &config::Bot) -> twilight_http::Client {
+    let mut http =
+        twilight_http::Client::builder().token(cfg.token().to_string());
+
+    if let Some(proxy_url) = cfg.proxy_url() {
+        http = http.proxy(proxy_url.into(), cfg.proxy_use_http());
+    }
+
+    http.build()
+}
+
+pub async fn setup_cmds(
+    interaction_client: InteractionClient<'_>,
+) -> Result<(), SetupCommandsError> {
+    use crate::{cmd, perform_request};
+    use twilight_interactions::command::CreateCommand;
+
+    let required_cmds = &[cmd::Ping::create_command().into()];
+
+    let now = Instant::now();
+    perform_request!(
+        interaction_client.set_global_commands(required_cmds),
+        SetupCommandsError
+    )
+    .await?;
+
+    let elapsed = now.elapsed();
+    tracing::info!(
+        ?elapsed,
+        "Sent {} global command/s to Discord",
+        required_cmds.len()
+    );
+
+    Ok(())
+}
+
 pub fn init_logging() -> Result<(), InitLoggingError> {
-    let targets = std::env::var("RUST_LOG")
+    let targets = dotenvy::var("RUST_LOG")
         .unwrap_or_else(|_| "info".into())
         .trim()
         .trim_matches('"')

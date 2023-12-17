@@ -7,8 +7,9 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-# error-stack.workspace = true
-# futures.workspace = true
-# kyoka.workspace = true
-# tokio.workspace = true
-# yansi.workspace = true
+error-stack.workspace = true
+futures.workspace = true
+kyoka.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+yansi.workspace = true

@@ -16,59 +16,23 @@ pub struct State {
     pub(super) songbird: Arc<Songbird>,
 }
 
-// impl State {
-//     pub fn new(cfg: config::Bot) {
-//         let mut gateway_cfg_builder = twilight_gateway::Config::builder(
-//             cfg.bot().token().to_string(),
-//             // Default gateway intents
-//             Intents::GUILDS | Intents::GUILD_MESSAGES,
-//         );
-//         let mut http = Http::builder().token(cfg.bot().token().to_string());
-//         if let Some(proxy) = cfg.bot().proxy() {
-//             http = http.proxy(proxy.url().to_string(), proxy.use_http());
-//             gateway_cfg_builder =
-//                 gateway_cfg_builder.proxy_url(proxy.url().to_string());
-//         }
-
-//         let http = Arc::new(http.build());
-
-//         tracing::debug!("Retrieving application info");
-//         let application =
-//             perform_request!(http.current_user_application(), SetupError)
-//                 .await?;
-
-//         tracing::debug!("Getting recommended amount of shards");
-//         let shards = twilight_gateway::stream::create_recommended(
-//             &http,
-//             gateway_cfg_builder.build(),
-//             |_, builder| builder.build(),
-//         )
-//         .await
-//         .change_context(SetupError)?
-//         .collect::<Vec<_>>();
-
-//         let clusters = songbird::shards::TwilightMap::new({
-//             let mut map = std::collections::HashMap::new();
-//             for shard in shards.iter() {
-//                 map.insert(shard.id().number(), shard.sender());
-//             }
-//             map
-//         });
-
-//         let songbird = Songbird::twilight(
-//             clusters.into(),
-//             application.id.cast::<UserMarker>(),
-//         );
-
-//         let state = State {
-//             application,
-//             config: Arc::new(cfg),
-//             http,
-//             songbird: Arc::new(songbird),
-//             shutdown_token: CancellationToken::new(),
-//         };
-//     }
-// }
+impl State {
+    pub(super) fn new(
+        app: App,
+        config: config::Shard,
+        http: Arc<twilight_http::Client>,
+        info: Application,
+        songbird: Songbird,
+    ) -> Self {
+        Self {
+            app: app.clone(),
+            config: Arc::new(config),
+            http,
+            info,
+            songbird: Arc::new(songbird),
+        }
+    }
+}
 
 impl State {
     #[must_use]

@@ -1,4 +1,7 @@
+mod bot;
 mod sentry;
+
+pub use self::bot::Bot;
 pub use self::sentry::{Sentry, SentryError};
 
 use thiserror::Error;

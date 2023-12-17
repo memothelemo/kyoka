@@ -1,149 +1,149 @@
-// mod state;
-// pub use state::State;
+mod cmd;
+mod handler;
+mod state;
 
-// use tokio::task::JoinSet;
-// use twilight_gateway_queue::LargeBotQueue;
+pub use cmd::{RunError, Runner};
+pub use state::State;
 
-// use crate::{config, App, SetupError};
-// use std::sync::Arc;
+use crate::BotQueue;
+use crate::{config, App, SetupError};
+use std::sync::Arc;
 
-// use error_stack::{Result, ResultExt};
-// use kyoka::perform_request;
-// use songbird::Songbird;
-// use twilight_gateway::Intents;
-// use twilight_gateway::Shard;
-// use twilight_http::Client as Http;
-// use twilight_model::id::marker::UserMarker;
+use error_stack::{Result, ResultExt};
+use kyoka::perform_request;
+use songbird::Songbird;
+use tokio::task::JoinSet;
+use twilight_gateway::Intents;
+use twilight_gateway::Shard;
+use twilight_gateway_queue::{LargeBotQueue, Queue};
+use twilight_http::Client as Http;
+use twilight_model::id::marker::UserMarker;
 
-// #[must_use]
-// fn default_gateway_intents() -> Intents {
-//     Intents::GUILDS | Intents::GUILD_MESSAGES
-// }
+#[must_use]
+fn default_gateway_intents() -> Intents {
+    Intents::GUILDS | Intents::GUILD_MESSAGES
+}
 
-// #[tracing::instrument(skip(app))]
-// async fn init(app: App) -> Result<(State, Vec<Shard>), SetupError> {
-//     let cfg = config::Shard::from_env().change_context(SetupError)?;
-//     tracing::info!("Starting Discord bot client");
+async fn init_shards(
+    cfg: &config::Shard,
+    http: &Arc<Http>,
+) -> Result<Vec<Shard>, SetupError> {
+    let mut gateway_cfg = twilight_gateway::Config::builder(
+        cfg.bot().token().into(),
+        default_gateway_intents(),
+    );
 
-//     let mut http = Http::builder().token(cfg.bot().token().to_string());
-//     let mut gateway = twilight_gateway::Config::builder(
-//         cfg.bot().token().into(),
-//         default_gateway_intents(),
-//     );
+    if let Some(proxy_url) = cfg.bot().gateway_proxy_url() {
+        gateway_cfg = gateway_cfg.proxy_url(proxy_url.into());
+    }
 
-//     if let Some(proxy_url) = cfg.bot().proxy_url() {
-//         http = http.proxy(proxy_url.into(), cfg.bot().proxy_use_http());
-//     }
+    let gateway_cfg = gateway_cfg.build();
+    let gateway_connect_info =
+        perform_request!(http.gateway().authed(), SetupError).await?;
 
-//     if let Some(proxy_url) = cfg.bot().gateway_proxy_url() {
-//         gateway = gateway.proxy_url(proxy_url.into());
-//     }
+    let (id, amount, total) = match cfg.connect_amount() {
+        config::ShardConnectAmount::Manual { id, amount, total } => {
+            (*id, amount.get(), total.get())
+        },
+        config::ShardConnectAmount::UseRecommended => {
+            tracing::debug!("Getting recommended amount of shards...");
+            (0, gateway_connect_info.shards, gateway_connect_info.shards)
+        },
+    };
 
-//     let http = Arc::new(http.build());
-//     let gateway = gateway.build();
+    tracing::info!("Setting up gateway queue...");
+    let queue: Arc<dyn Queue> = if let Some(queue_url) = cfg.gateway_queue_url()
+    {
+        Arc::new(BotQueue::new(queue_url).await?)
+    } else {
+        let buckets = gateway_connect_info
+            .session_start_limit
+            .max_concurrency
+            .try_into()
+            .unwrap();
 
-//     tracing::info!("Retrieving application info");
-//     let info =
-//         perform_request!(http.current_user_application(), SetupError).await?;
+        let queue = LargeBotQueue::new(buckets, http.clone()).await;
+        Arc::new(queue)
+    };
 
-//     let queue = Arc::new(LargeBotQueue::new(concurrency, http.clone()).await);
-//     let shards = {
-//         let (shard_id, shard_amount, shard_total, concurrency) =
-//             match cfg.connect_amount() {
-//                 config::ShardConnectAmount::Manual { id, amount, total } => {
-//                     (*id, amount.get(), total.get(), 1)
-//                 },
-//                 config::ShardConnectAmount::UseRecommended => {
-//                     tracing::debug!("Getting recommended amount of shards...");
-//                     let info =
-//                         perform_request!(http.gateway().authed(), SetupError)
-//                             .await?;
+    tracing::debug!(
+        id = %id,
+        amount = %amount,
+        total = %total,
+        "Creating {amount} shard/s..."
+    );
 
-//                     (
-//                         0,
-//                         info.shards,
-//                         info.shards,
-//                         info.session_start_limit
-//                             .max_concurrency
-//                             .try_into()
-//                             .unwrap(),
-//                     )
-//                 },
-//             };
+    let min = id;
+    let max = id + amount;
 
-//         tracing::debug!(
-//             id = %shard_id,
-//             amount = %shard_amount,
-//             total = %shard_total,
-//             "Creating {shard_amount} shard/s..."
-//         );
+    let shards = twilight_gateway::stream::create_range(
+        min..max,
+        amount,
+        gateway_cfg,
+        |_, builder| builder.queue(queue.clone()).build(),
+    )
+    .collect::<Vec<_>>();
 
-//         let min = shard_id;
-//         let max = shard_id + shard_amount;
+    Ok(shards)
+}
 
-//         twilight_gateway::stream::create_range(
-//             min..max,
-//             shard_amount,
-//             gateway,
-//             |_, builder| builder.queue(queue.clone()).build(),
-//         )
-//     }
-//     .collect::<Vec<_>>();
+#[tracing::instrument(skip(app))]
+async fn init(app: App) -> Result<(State, Vec<Shard>), SetupError> {
+    let cfg = config::Shard::from_env().change_context(SetupError)?;
+    tracing::info!("Starting Discord bot client");
 
-//     let clusters = songbird::shards::TwilightMap::new({
-//         let mut map = std::collections::HashMap::new();
-//         for shard in shards.iter() {
-//             map.insert(shard.id().number(), shard.sender());
-//         }
-//         map
-//     });
+    let http = Arc::new(kyoka::util::make_http_client(cfg.bot()));
+    tracing::info!("Retrieving application info");
+    let info =
+        perform_request!(http.current_user_application(), SetupError).await?;
 
-//     let songbird =
-//         Songbird::twilight(clusters.into(), info.id.cast::<UserMarker>());
+    if cfg.bot().reload_commands_on_start() {
+        tracing::info!(
+            "Reload commands on start is enabled; reloading all commands"
+        );
+        kyoka::util::setup_cmds(http.interaction(info.id))
+            .await
+            .change_context(SetupError)?;
+    }
 
-//     let state = State {
-//         app: app.clone(),
-//         config: Arc::new(cfg),
-//         http,
-//         info,
-//         songbird: Arc::new(songbird),
-//     };
+    let shards = init_shards(&cfg, &http).await?;
+    let clusters = songbird::shards::TwilightMap::new({
+        let mut map = std::collections::HashMap::new();
+        for shard in shards.iter() {
+            map.insert(shard.id().number(), shard.sender());
+        }
+        map
+    });
 
-//     Ok((state, shards))
-// }
+    let songbird =
+        Songbird::twilight(clusters.into(), info.id.cast::<UserMarker>());
 
-// pub async fn start(app: App) -> Result<(), SetupError> {
-//     let (state, shards) = init(app.clone()).await?;
-//     tracing::info!("Starting bot with {} shard/s", shards.len());
+    let state = State::new(app, cfg, http, info, songbird);
+    Ok((state, shards))
+}
 
-//     let mut handle = JoinSet::new();
+pub async fn start(app: App) -> Result<(), SetupError> {
+    let mut handle = JoinSet::new();
+    let (state, shards) = init(app.clone()).await?;
+    tracing::info!("Starting bot with {} shard/s", shards.len());
 
-//     for mut shard in shards {
-//         let app = app.clone();
-//         handle.spawn(async move {
-//             loop {
-//                 tokio::select! {
-//                     _ = shard.next_event() => {},
-//                     _ = app.shutdown_signal() => {
-//                         break;
-//                     }
-//                 }
-//             }
-//             shard.close(twilight_gateway::CloseFrame::NORMAL).await;
-//         });
-//     }
-//     tracing::info!("All shards are successfully connected");
+    for mut shard in shards {
+        let state = state.clone();
+        handle.spawn(async move {
+            handler::shard(state, &mut shard).await;
+        });
+    }
 
-//     tokio::select! {
-//         _ = kyoka::util::shutdown_signal() => {
-//             app.perform_shutdown("Received shutdown signal");
-//         },
-//         _ = app.shutdown_signal() => {}
-//     };
+    tokio::select! {
+        _ = kyoka::util::shutdown_signal() => {
+            app.perform_shutdown("Received shutdown signal");
+        },
+        _ = app.shutdown_signal() => {}
+    };
 
-//     tracing::info!("Waiting for all shards to finish their tasks");
-//     while handle.join_next().await.is_some() {}
+    tracing::info!("Waiting for all shards to finish their tasks");
+    while handle.join_next().await.is_some() {}
 
-//     tracing::info!("All shards are successfully shut down");
-//     Ok(())
-// }
+    tracing::info!("All shards are successfully shut down");
+    Ok(())
+}

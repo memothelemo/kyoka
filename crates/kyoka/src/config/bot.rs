@@ -1,5 +1,5 @@
+use crate::util::{env, Sensitive};
 use error_stack::{Result, ResultExt};
-use kyoka::util::{env, Sensitive};
 
 use super::LoadError;
 

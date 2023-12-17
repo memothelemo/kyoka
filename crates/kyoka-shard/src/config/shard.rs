@@ -86,7 +86,7 @@ impl ShardConnectAmount {
 pub struct Shard {
     bot: super::Bot,
     connect_amount: ShardConnectAmount,
-    queuer_url: Option<String>,
+    gateway_queue_url: Option<String>,
 }
 
 const RECOMMENDED_SUGGESTION: &str = concat!(
@@ -106,33 +106,30 @@ enum InvalidShardConfig {
         "\"SHARD_AMOUNT\" cannot be fit with \"SHARD_TOTAL\" frm \"SHARD_ID\""
     )]
     AmountTooMany,
-    #[error("\"SHARD_QUEUER_URL\" must be in URL form")]
+    #[error(
+        "\"GATEWAY_QUEUE_URL\" must be in valid URL form or in HTTP/HTTPS"
+    )]
     InvalidQueuerUrl,
-    #[error("\"SHARD_QUEUER_URL\" must not end with `/`")]
-    EndsWithSlash,
 }
 
 impl Shard {
     #[track_caller]
     pub fn from_env() -> Result<Self, LoadError> {
         let queuer_url = if let Some(url) =
-            env::var("SHARD_QUEUER_URL").change_context(LoadError)?
+            env::var("GATEWAY_QUEUE_URL").change_context(LoadError)?
         {
-            let Ok(parsed) = url::Url::parse(&url) else {
+            let Ok(mut parsed) = url::Url::parse(&url) else {
                 return Err(InvalidShardConfig::InvalidQueuerUrl)
                     .change_context(LoadError);
             };
 
-            if parsed
-                .path_segments()
-                .map(|mut v| v.any(|v| v.is_empty()))
-                .unwrap_or_default()
-            {
-                return Err(InvalidShardConfig::EndsWithSlash)
-                    .change_context(LoadError)?;
+            parsed.set_path("");
+            if !matches!(parsed.scheme(), "http" | "https") {
+                return Err(InvalidShardConfig::InvalidQueuerUrl)
+                    .change_context(LoadError);
             }
 
-            Some(url)
+            Some(parsed.to_string())
         } else {
             None
         };
@@ -140,7 +137,7 @@ impl Shard {
         Ok(Self {
             bot: super::Bot::from_env()?,
             connect_amount: ShardConnectAmount::from_env()?,
-            queuer_url,
+            gateway_queue_url: queuer_url,
         })
     }
 }
@@ -157,7 +154,7 @@ impl Shard {
     }
 
     #[must_use]
-    pub fn queuer_url(&self) -> Option<&str> {
-        self.queuer_url.as_deref()
+    pub fn gateway_queue_url(&self) -> Option<&str> {
+        self.gateway_queue_url.as_deref()
     }
 }

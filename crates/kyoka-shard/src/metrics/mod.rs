@@ -1,53 +1,61 @@
-use actix_web_prom::PrometheusMetricsBuilder;
-use error_stack::{Result, ResultExt};
-
-use crate::{config, App, SetupError};
-
 mod router;
+pub mod server;
 
-pub async fn start(app: App) -> Result<(), SetupError> {
-    if !config::Metrics::is_enabled() {
-        return Ok(());
+use actix_web_prom::PrometheusMetrics;
+use error_stack::{Result, ResultExt};
+use kyoka::metrics::MetricsSetupError;
+use prometheus::{HistogramVec, IntGauge};
+use prometheus_macros::composite_metric;
+
+composite_metric! {
+    #[derive(Debug, Clone)]
+    pub struct Metrics {
+        #[name = "events_processed"]
+        #[desc = "All events processed in all shards"]
+        events_processed: IntGauge,
+        #[name = "shard_latency"]
+        #[desc = "Latency of each shards"]
+        #[labels = ["shard"]]
+        shard_latency: HistogramVec,
     }
-
-    let cfg = config::Metrics::from_env().change_context(SetupError)?;
-    tracing::info!(cfg.metrics = ?cfg, "Starting HTTP metrics server");
-
-    let prometheus = PrometheusMetricsBuilder::new("api")
-        .endpoint("/metrics")
-        .build()
-        .unwrap();
-
-    tracing::info!(
-        "HTTP metrics server is listening at http://{}:{}",
-        cfg.host(),
-        cfg.port()
-    );
-
-    let server = actix_web::HttpServer::new(move || {
-        actix_web::App::new()
-            .configure(router::configure)
-            .wrap(prometheus.clone())
-            .wrap(sentry_actix::Sentry::new())
-    })
-    .workers(1)
-    .bind((cfg.host(), cfg.port()))
-    .change_context(SetupError)?
-    .run();
-
-    // actix will handle graceful shutdowns
-    let handle = server.handle();
-    tokio::select! {
-        result = server => {
-            if let Err(error) = result {
-                tracing::error!(?error, "Metrics server failed");
-                app.perform_shutdown("Received metrics server fatal error");
-            }
-        },
-        _ = app.shutdown_signal() => {
-            handle.stop(true).await;
-        }
-    }
-
-    Ok(())
 }
+
+impl Metrics {
+    pub fn setup(
+        &self,
+        metrics: &PrometheusMetrics,
+    ) -> Result<(), MetricsSetupError> {
+        metrics
+            .registry
+            .register(Box::new(self.shard_latency.clone()))
+            .change_context(MetricsSetupError)?;
+
+        metrics
+            .registry
+            .register(Box::new(self.events_processed.clone()))
+            .change_context(MetricsSetupError)?;
+
+        Ok(())
+    }
+}
+
+// #[derive(Debug, Clone)]
+// pub struct Metrics {
+//     pub system: SystemMetrics,
+//     pub shard_latency: HistogramVec,
+// }
+
+// impl Metrics {
+//     pub fn new() -> Result<Self, MetricsSetupError> {
+//         // let shard_latency = HistogramVec::new(op, &["shard"]);
+//         Ok(Self { , system: SystemMetrics::new()? })
+//     }
+
+//     pub fn setup(
+//         &self,
+//         metrics: &PrometheusMetrics,
+//     ) -> Result<(), MetricsSetupError> {
+//         self.system.setup(metrics)?;
+//         Ok(())
+//     }
+// }

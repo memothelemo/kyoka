@@ -1,31 +1,22 @@
 [package]
-name = "kyoka"
+name = "kyoka-gateway-queue"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
-[features]
-gateway-queue = []
-
 [dependencies]
-dotenvy.workspace = true
+actix-web.workspace = true
+# actix-web-prom.workspace = true
 error-stack.workspace = true
+kyoka.workspace = true
 futures.workspace = true
-prometheus.workspace = true
-sentry.workspace = true
 serde.workspace = true
+sentry.workspace = true
+sentry-actix.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-tracing-subscriber.workspace = true
+twilight-gateway-queue.workspace = true
 twilight-http.workspace = true
-twilight-interactions.workspace = true
-twilight-model.workspace = true
-
-actix-web-prom.workspace = true
-systemstat = "0.2.3"
-
-[dev-dependencies]
-serde_test.workspace = true
