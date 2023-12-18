@@ -51,15 +51,14 @@ fn main() -> Result<(), SetupError> {
         println!();
         println!("{err:?}");
         println!("{}", "⚠️ This may be a bug! Please file this issue at: https://github.com/memothelemo/kyoka/issues".bright_yellow().bold());
-    } else {
-        println!(
-            "{}",
-            "✅ Successfully initialized bot environment!"
-                .bright_green()
-                .bold()
-        );
-        println!("You may start the bot session/shard program now.");
+        std::process::exit(1);
     }
+
+    println!(
+        "{}",
+        "✅ Successfully initialized bot environment!".bright_green().bold()
+    );
+    println!("You may start the bot session/shard program now.");
 
     Ok(())
 }

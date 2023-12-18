@@ -56,7 +56,7 @@ jobs:
          uses: docker/build-push-action@v4
          with:
             push: true
-            file: dev/Dockerfile
+            file: docker/shard/Dockerfile
             context: .
             tags: memothelemo/kyoka:dev
             # https://docs.docker.com/build/ci/github-actions/cache/#registry-cache
