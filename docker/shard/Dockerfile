@@ -50,8 +50,7 @@ ARG BUILD_DIR
 ARG USER
 
 # songbird relies on `ytdl` binary anyway
-RUN apt update && apt install -y ca-certificates python3-pip ffmpeg
-RUN pip install -U yt-dlp
+RUN apt update && apt install -y ca-certificates yt-dlp
 
 # Testing dependencies
 RUN set -ex; yt-dlp --help
