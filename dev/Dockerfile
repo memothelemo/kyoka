@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 ARG RUST_VERSION=1.74.0
 ARG USER=kyoka
-ARG RUST_BUILD_MODE=debug
+ARG RUST_BUILD_MODE=release
 
 FROM rust:${RUST_VERSION} AS compile
 

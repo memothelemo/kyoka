@@ -23,6 +23,7 @@ pub async fn start(app: App) -> Result<(), SetupError> {
 
     let system_metrics = SystemMetrics::new().change_context(SetupError)?;
     app.metrics().setup(&prometheus).change_context(SetupError)?;
+    system_metrics.setup(&prometheus).change_context(SetupError)?;
 
     tracing::info!(
         "HTTP metrics server is listening at http://{}:{}",
