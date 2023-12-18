@@ -119,8 +119,7 @@ pub async fn shard(state: State, shard: &mut Shard) {
                         .app()
                         .metrics()
                         .shard_latency()
-                        .with_label_values(&[&format!("shard-{}", shard.id().number())])
-                        .observe(latency.as_millis() as f64 / 1000.0);
+                        .set(latency.as_secs_f64());
                 }
 
                 let state = state.clone();

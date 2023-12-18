@@ -4,7 +4,7 @@ pub mod server;
 use actix_web_prom::PrometheusMetrics;
 use error_stack::{Result, ResultExt};
 use kyoka::metrics::MetricsSetupError;
-use prometheus::{HistogramVec, IntGauge};
+use prometheus::{Gauge, IntGauge};
 use prometheus_macros::composite_metric;
 
 composite_metric! {
@@ -16,7 +16,7 @@ composite_metric! {
         #[name = "shard_latency"]
         #[desc = "Latency of each shards"]
         #[labels = ["shard"]]
-        shard_latency: HistogramVec,
+        shard_latency: Gauge,
     }
 }
 
