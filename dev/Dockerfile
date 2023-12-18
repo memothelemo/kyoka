@@ -5,6 +5,8 @@ ARG RUST_BUILD_MODE=debug
 
 FROM rust:${RUST_VERSION} AS compile
 
+ARG RUST_BUILD_MODE
+
 WORKDIR /usr/build/kyoka
 COPY . .
 
@@ -20,7 +22,7 @@ RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/re
     elif [ "${RUST_BUILD_MODE}" = "release" ]; then \
         cargo build --release; \
     else \
-        echo "Please specify whether RUST_BUILD_MODE is in `debug` or `release`"; \
+        echo "Please specify whether RUST_BUILD_MODE is in 'debug' or 'release'"; \
         exit 1;\
     fi; \
     cargo build; \
@@ -30,6 +32,8 @@ RUN --mount=type=cache,target=/usr/build/kyoka/target,target=/usr/local/cargo/re
 
 ###############################################################
 FROM debian:bookworm-slim AS runner
+
+ARG USER
 
 # songbird relies on `ytdl` binary anyway
 RUN apt update && apt install -y ca-certificates youtube-dl
@@ -43,14 +47,14 @@ RUN adduser \
     --home "/dev/null" \
     --no-create-home \
     --gecos "" \
-    worker
+    ${USER}
 
 WORKDIR /app
 
 COPY --chmod=0755 --from=compile /usr/build/kyoka/dist/* ./
 COPY --chmod=0755 --from=compile /usr/build/kyoka/dev/entrypoint.sh ./
 
-USER worker
+USER ${USER}
 
 LABEL org.opencontainers.image.authors="memothelemo"
 LABEL org.opencontainers.image.source="https://github.com/memothelemo/kyoka"
