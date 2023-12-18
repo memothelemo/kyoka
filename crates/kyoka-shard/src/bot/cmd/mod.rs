@@ -1,3 +1,4 @@
+mod connect;
 mod ping;
 
 use async_trait::async_trait;

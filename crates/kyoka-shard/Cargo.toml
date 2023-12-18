@@ -32,3 +32,4 @@ actix-web.workspace = true
 actix-web-prom.workspace = true
 prometheus.workspace = true
 sentry-actix.workspace = true
+twilight-cache-inmemory = "0.15.4"

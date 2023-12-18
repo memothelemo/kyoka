@@ -1,13 +1,16 @@
-mod ping;
-pub use ping::*;
+use error_stack::{Result, ResultExt};
+use twilight_interactions::command::{CommandModel, CreateCommand};
+use twilight_model::{
+    application::interaction::Interaction, http::interaction::*,
+};
 
-mod prelude {
-    #[allow(unused)]
-    pub(crate) use crate::perform_request;
+#[derive(Debug, CommandModel, CreateCommand)]
+#[command(name = "ping", desc = "Responds back with pong")]
+pub struct Ping;
 
-    pub use error_stack::{Result, ResultExt};
-    pub use twilight_interactions::command::{CommandModel, CreateCommand};
-    pub use twilight_model::{
-        application::interaction::Interaction, http::interaction::*,
-    };
-}
+#[derive(Debug, CommandModel, CreateCommand)]
+#[command(
+    name = "join",
+    desc = "Connects the bot to the voice channel you've joined"
+)]
+pub struct Join;

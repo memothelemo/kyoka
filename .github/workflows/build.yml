@@ -31,7 +31,6 @@ jobs:
         with:
           command: build
 
-          
   docker-images:
     name: Docker Dev Images (shard & queue)
     runs-on: ubuntu-latest
